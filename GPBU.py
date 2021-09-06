@@ -11,6 +11,9 @@ from os import listdir
 from os.path import isfile, join
 import rawpy
 import imageio
+import sys
+import shutil
+from PIL import Image
 
 def auth(scopes):
         flow = InstalledAppFlow.from_client_secrets_file(
@@ -100,7 +103,7 @@ def upload_photos(session, photo_file_list, album_name):
 
             resp = session.post('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', create_body).json()
 
-            print("Server response: {}".format(resp))
+            #print("Server response: {}".format(resp))
 
             if "newMediaItemResults" in resp:
                 status = resp["newMediaItemResults"][0]["status"]
@@ -121,11 +124,29 @@ def upload_photos(session, photo_file_list, album_name):
     except KeyError:
         pass
 
+def parse_path(args):
+    if len(args) == 1 or len(args[1]) == 0:
+        print("Please enter a file path")
+        return ""
+    
+    if os.path.exists(args[0]) == False:
+        print("Path does not exist")
+        return ""
+
+    return args[1]
+
 def main():
     session = get_authorized_session()
 
+    #path = parse_path(sys.argv)
 
-    for root, dirs, files in os.walk('/Users/marcus/Dropbox/Media/Photography/2019'):
+    #if path == "":
+    #    return
+
+    path = '/Users/marcus/Dropbox/Media/Photography/2019'
+
+
+    for root, dirs, files in os.walk(path):
         for sd in dirs:
             onlyfiles = []
 
@@ -146,16 +167,29 @@ def main():
                     
                     impath = dtemp + fileName + '.jpg'
 
-                    print('Converting ' + fileName + " to " + impath) 
-                    try:
-                        with rawpy.imread(full_path) as raw:
-                            rgb = raw.postprocess()
-                        
-                        imageio.imsave(impath, rgb)
+                    filename, file_extension = os.path.splitext(full_path)
 
+                    if file_extension.lower() == ".jpg":
+                        print("image is already a jpg.")
+                        shutil.copy(full_path, impath)
                         onlyfiles.append(impath)
-                    except:
-                        print('failed')
+                    elif file_extension.lower() == ".png":
+                        print("image is a png. converting to jpg")
+                        im1 = Image.Open(full_path)
+                        im1.save(impath)
+                        onlyfiles.append(impath)
+                    else:
+                        print('Converting ' + fileName + " to " + impath) 
+                        try:
+                            with rawpy.imread(full_path) as raw:
+                                rgb = raw.postprocess()
+                            
+                            imageio.imsave(impath, rgb)
+
+                            onlyfiles.append(impath)
+                        except:
+                            e = sys.exc_info()[0]
+                            print(e)
 
 
             upload_photos(session, onlyfiles, os.path.basename(d).replace(':', '/'))
