@@ -138,12 +138,11 @@ def parse_path(args):
 def main():
     session = get_authorized_session()
 
-    #path = parse_path(sys.argv)
+    path = parse_path(sys.argv)
 
-    #if path == "":
-    #    return
+    if path == "":
+        return
 
-    path = '/Users/marcus/Dropbox/Media/Photography/2019'
 
 
     for root, dirs, files in os.walk(path):
